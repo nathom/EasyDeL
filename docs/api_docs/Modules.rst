@@ -56,10 +56,14 @@ Modules
    modules.roberta.modeling_roberta_flax
    modules.deepseek_v2.deepseek_configuration
    modules.deepseek_v2.modeling_deepseek_flax
+   modules.xerxes2.modeling_xerxes2_flax
+   modules.xerxes2.xerxes2_configuration
    modules.llava.modeling_llava_flax
    modules.llava.llava_configuration
    modules.olmo.modeling_olmo_flax
    modules.olmo.olmo_configuration
+   modules.minimax_text_v1.modeling_minimax_text_01_flax
+   modules.minimax_text_v1.minimax_text_01_configuration
    modules.exaone.exaone_configuration
    modules.exaone.modeling_exaone_flax
    modules.gemma.modeling_gemma_flax

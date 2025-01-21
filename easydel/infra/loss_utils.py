@@ -57,8 +57,8 @@ class LossConfig:
 	label_smoothing: float = 0.0
 	z_loss: float = 0.0
 	loss_normalizing_factor: FACTOR_TYPE = (
-		 "NUM_REAL_TARGET_TOKENS"
-#		"NO_WEIGHT_NUM_REAL_TARGET_TOKENS"
+		"NUM_REAL_TARGET_TOKENS"
+		# "NO_WEIGHT_NUM_REAL_TARGET_TOKENS"
 	)
 	num_labels: tp.Optional[str] = None
 	problem_type: tp.Optional[str] = None
@@ -103,6 +103,7 @@ class LossMetrics:
 	chosen_rewards: tp.Optional[jax.Array] = None
 	rejected_rewards: tp.Optional[jax.Array] = None
 	other_metrics: tp.Optional[tp.Mapping[str, jax.Array]] = None
+	execution_time: tp.Optional[float] = None
 
 
 def sigmoid_cross_entropy_with_logits(

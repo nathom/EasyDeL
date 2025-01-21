@@ -15,6 +15,7 @@
 """Utility functions for managing and manipulating nnx module states."""
 
 import typing as tp
+from collections.abc import Iterable
 
 import chex
 import jax
@@ -119,6 +120,10 @@ def _dict_flatten_dict(xs, keep_empty_nodes=False, is_leaf=None, sep=None):
 		return result
 
 	return _flatten(xs, ())
+
+
+def is_iterable(obj):
+	return isinstance(obj, Iterable)
 
 
 def _dict_unflatten_dict(xs, sep=None):
@@ -505,7 +510,7 @@ def merge_state_and_tree(tree: dict, state: nnx.State) -> nnx.State:
 	if not is_flatten(tree):
 		tree = flatten_dict(tree)
 	tree = string_key_to_int(tree)
-	
+
 	for keys in list(params.keys()):
 		tree_values = tree.get(keys, None)
 		if tree_values is not None:

@@ -15,8 +15,11 @@ Layers
    layers.caching.mamba2_cache
    layers.caching.transformer_cache_test
    layers.caching.mamba_cache
+   layers.caching.lightning_cache
    layers.caching.mamba_cache_test
    layers.caching.transformer_cache
    layers.caching.mamba2_cache_test
+   layers.ops.gla
+   layers.ops.lightning_attention
    layers._blockwise_attention
    layers.norms

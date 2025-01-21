@@ -15,13 +15,15 @@ import typing as tp
 from functools import partial
 
 import jax
+import jax.experimental
+import jax.lib
 from jax import numpy as jnp
 from jax.sharding import PartitionSpec
 
 from easydel.infra.base_state import EasyDeLState
 from easydel.infra.errors import EasyDeLBreakRequest, EasyDeLTimerError
 from easydel.infra.loss_utils import LossMetrics
-from easydel.utils.helpers import get_logger
+from easydel.utils.helpers import capture_time, get_logger
 
 from ..base_trainer import (
 	BaseTrainer,
@@ -95,11 +97,12 @@ class Trainer(BaseTrainer):
 			spec=PartitionSpec(),
 			mesh=self.model.mesh,
 		)
+
 		sharded_training_step_function = jax.jit(
 			partial(
 				training_step,
-				partition_spec=self.arguments.step_partition_spec,
 				loss_config=self.arguments.loss_config,
+				partition_spec=self.arguments.step_partition_spec,
 				learning_rate_fn=self.scheduler,
 				gradient_accumulation_steps=self.arguments.gradient_accumulation_steps,
 			),
@@ -111,7 +114,7 @@ class Trainer(BaseTrainer):
 			],
 			in_shardings=(self.state_shardings, empty_sharding),
 			out_shardings=(self.state_shardings, empty_sharding),
-			donate_argnums=(0, 0),
+			donate_argnums=(0,),
 		)
 
 		sharded_evaluation_step_function = jax.jit(
@@ -123,7 +126,6 @@ class Trainer(BaseTrainer):
 			static_argnames=["partition_spec", "loss_config"],
 			in_shardings=(self.state_shardings, empty_sharding),
 			out_shardings=(empty_sharding),
-			donate_argnums=(0, 0),
 		)
 
 		mesh = self.model.mesh
@@ -235,7 +237,13 @@ class Trainer(BaseTrainer):
 				return state, exect
 
 			# Execute training step
-			state, metrics, run_exception = self._execute_train_step(state=state, batch=batch)
+			with self.train_tracker.trace_compilation():
+				with capture_time() as execution_time:
+					state, metrics, run_exception = self._execute_train_step(
+						state=state,
+						batch=batch,
+					)
+					metrics.execution_time = execution_time()
 			# Update and log metrics
 			try:
 				mean_loss, mean_accuracy = metrics_tracker.update(
@@ -297,7 +305,12 @@ class Trainer(BaseTrainer):
 			try:
 				batch = self._get_next_batch(eval_iter)
 				step_metrics.start_step()
-				metrics = self._execute_eval_step(state, batch)
+
+				with self.evalu_tracker.trace_compilation():
+					with capture_time() as execution_time:
+						metrics = self._execute_eval_step(state, batch)
+						metrics.execution_time = execution_time()
+
 				mean_loss, mean_accuracy = metrics_tracker.update(
 					metrics.loss,
 					metrics.accuracy,
@@ -342,10 +355,10 @@ class Trainer(BaseTrainer):
 					state.opt_state,
 				)
 			)
-
-		# Forward and backward pass
 		try:
-			state, metrics = self.sharded_training_step_function(state, batch)
+			state, metrics = jax.block_until_ready(
+				self.sharded_training_step_function(state, batch)
+			)
 			# Apply post-gradient updates
 			if self.pruning_module is not None:
 				state = state.replace(

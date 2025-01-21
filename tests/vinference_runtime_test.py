@@ -27,11 +27,12 @@ def main():
 
 	extra = {}
 	if jax.default_backend() == "gpu":
+		max_length = 2048
 		import torch
 
 		extra = {"torch_dtype": torch.float16}
 
-		dtype = jnp.float16
+		dtype = jnp.float8_e5m2
 		param_dtype = jnp.float8_e5m2
 		if os.environ.get("APPED_LORA_TEST", "false") in ["true", "yes"]:
 			param_dtype = jnp.float16
@@ -50,7 +51,7 @@ def main():
 			# blocksize_q=512,
 			# blocksize_k=512,
 		)
-
+	print(dtype, param_dtype)
 	partition_axis = ed.PartitionAxis()
 	tokenizer = transformers.AutoTokenizer.from_pretrained(pretrained_model_name_or_path)
 	tokenizer.padding_side = "left"
@@ -94,7 +95,7 @@ def main():
 
 	print(model.model_task)
 	print(model.model_type)
-	if os.environ.get("USE_AOT", "true") in ["true", "yes", "on", "1"]:
+	if os.environ.get("USE_AOT", "false") in ["true", "yes", "on", "1"]:
 		print("Compiling")
 		inference.precompile(1, inference.model_prefill_length)
 		print("Done Compiling")
